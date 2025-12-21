@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Ticket Manager 3.1 - Next Gen Workflow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- RESET & VARIABLES --- */
+        :root {
+            --bg-color: #030712;
+            --surface-color: #0F172A;
+            --primary: #6366F1;
+            --primary-glow: rgba(99, 102, 241, 0.5);
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glass-bg: rgba(15, 23, 42, 0.85); /* Slightly more opaque for better contrast */
+            --font-sans: 'Inter', sans-serif;
+            --font-display: 'Outfit', sans-serif;
+            
+            /* Modern Easing */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent; /* Remove blue highlight on mobile */
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: var(--font-sans);
+            overflow-x: hidden;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        button { cursor: pointer; border: none; background: none; font-family: inherit; }
+        
+        /* --- UTILITIES --- */
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+        
+        /* Mobile container tweak for more width */
+        @media (max-width: 767px) {
+            .container { padding: 0 1.25rem; }
+        }
+
+        .flex { display: flex; }
+        .flex-col { flex-direction: column; }
+        .items-center { align-items: center; }
+        .justify-center { justify-content: center; }
+        .justify-between { justify-content: space-between; }
+        .gap-2 { gap: 0.5rem; }
+        .gap-4 { gap: 1rem; }
+        .gap-6 { gap: 1.5rem; }
+        .text-center { text-align: center; }
+        .w-full { width: 100%; }
+        .hidden { display: none; }
+        
+        /* --- ANIMATIONS --- */
+        @keyframes pulse-slow {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.1); }
+        }
+
+        @keyframes shimmer {
+            from { background-position: 0 0; }
+            to { background-position: -200% 0; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+
+        /* Cinematic Reveal Animation */
+        .animate-reveal {
+            opacity: 0;
+            filter: blur(10px);
+            transform: translateY(30px) scale(0.95);
+            transition: 
+                opacity 1s var(--ease-out-expo), 
+                transform 1.2s var(--ease-out-expo), 
+                filter 1s var(--ease-out-expo);
+            will-change: opacity, transform, filter;
+        }
+
+        .animate-reveal.visible {
+            opacity: 1;
+            filter: blur(0);
+            transform: translateY(0) scale(1);
+        }
+
+        /* Stagger Delays */
+        .delay-100 { transition-delay: 0.1s; }
+        .delay-200 { transition-delay: 0.2s; }
+        .delay-300 { transition-delay: 0.3s; }
+        .delay-400 { transition-delay: 0.4s; }
+
+        /* --- COMPONENTS --- */
+        
+        /* Noise Overlay */
+        .bg-noise {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 50; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* Navbar */
+        .navbar-wrapper {
+            position: fixed;
+            top: 1rem; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            padding: 0 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .navbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 80rem; /* 7xl */
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            transition: all 0.4s var(--ease-out-expo);
+            /* Glass effect always on for mobile to ensure readability over content */
+            background-color: rgba(15, 23, 42, 0.5); 
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .navbar.scrolled {
+            background-color: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 64rem; /* 5xl */
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-display);
+            font-weight: 700;
+            font-size: 1.125rem;
+            color: white;
+            cursor: pointer;
+        }
+
+        .logo-icon {
+            position: relative;
+            width: 2rem; height: 2rem;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .logo-glow {
+            position: absolute; inset: 0; background: var(--primary);
+            border-radius: 0.5rem; filter: blur(4px); opacity: 0.4;
+            transition: opacity 0.3s;
+        }
+        .logo:hover .logo-glow { opacity: 0.8; }
+
+        .logo-box {
+            position: relative; background: #0f172a; border: 1px solid #334155;
+            border-radius: 0.5rem; padding: 4px; display: flex;
+        }
+
+        /* NAVIGATION LINKS - HIDDEN ON MOBILE BY DEFAULT */
+        .nav-links {
+            display: none; /* Changed from flex to none */
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .nav-pill {
+            display: flex;
+            background: rgba(255,255,255,0.05);
+            padding: 0.25rem;
+            border-radius: 9999px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(4px);
+            margin-right: 1rem;
+        }
+
+        .nav-link {
+            padding: 0.375rem 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-radius: 9999px;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        .nav-link:hover { color: white; background: rgba(255,255,255,0.1); }
+
+        .btn-download {
+            position: relative;
+            padding: 0.625rem 1.5rem;
+            background: #F8FAFC;
+            color: #020617;
+            font-weight: 600;
+            font-size: 0.875rem;
+            border-radius: 9999px;
+            overflow: hidden;
+            transition: transform 0.3s var(--ease-out-back);
+        }
+        .btn-download:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+
+        /* MOBILE MENU BUTTON - VISIBLE ON MOBILE BY DEFAULT */
+        .mobile-menu-btn { 
+            display: flex; /* Changed from none to flex */
+            color: white; 
+            padding: 0.5rem; 
+        }
+
+        /* Mobile Menu */
+        .mobile-menu {
+            position: fixed;
+            top: 5.5rem; left: 1rem; right: 1rem;
+            background: #0B0E14; /* Solid dark background for readability */
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 1.5rem;
+            padding: 1rem;
+            z-index: 90;
+            transform-origin: top;
+            transform: scaleY(0);
+            opacity: 0;
+            transition: all 0.4s var(--ease-out-expo);
+            pointer-events: none;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+        }
+        .mobile-menu.open {
+            transform: scaleY(1);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .mobile-link {
+            display: block; padding: 1rem;
+            color: var(--text-muted); font-weight: 500; font-size: 1.1rem;
+            border-radius: 0.75rem;
+            text-align: center;
+        }
+        .mobile-link:active { background: rgba(255,255,255,0.1); color: white; }
+
+        /* Hero Section */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            padding-top: 7rem; /* Reduced for mobile */
+            padding-bottom: 4rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .aurora-container {
+            position: absolute; inset: 0; pointer-events: none; z-index: -10;
+        }
+        .aurora-1, .aurora-2 {
+            position: absolute;
+            border-radius: 9999px;
+            filter: blur(80px);
+            opacity: 0.3;
+            transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .aurora-1 {
+            top: 0; left: 50%; transform: translateX(-50%);
+            width: 800px; height: 500px;
+            background: rgba(99, 102, 241, 0.3);
+            animation: pulse-slow 6s infinite alternate;
+        }
+        .aurora-2 {
+            top: 20%; left: 20%;
+            width: 600px; height: 400px;
+            background: rgba(147, 51, 234, 0.2);
+            animation: float 8s infinite ease-in-out;
+        }
+
+        .badge-new {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.375rem 1rem;
+            background: rgba(255,255,255,0.08); /* Slightly brighter */
+            border: 1px solid var(--border-color);
+            border-radius: 9999px;
+            color: #A5B4FC; font-size: 0.875rem; font-weight: 500;
+            margin-bottom: 1.5rem;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 0 15px rgba(99,102,241,0.15);
+            transition: border-color 0.3s;
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            /* Fluid Typography */
+            font-size: clamp(2.5rem, 9vw, 5.5rem); 
+            font-weight: 800;
+            line-height: 1.05;
+            margin-bottom: 1rem;
+            color: white;
+            letter-spacing: -0.02em;
+        }
+        .text-gradient {
+            background: linear-gradient(to right, #818CF8, #D8B4FE, #818CF8);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 4s linear infinite;
+            display: inline-block;
+        }
+
+        .hero-desc {
+            font-size: clamp(1rem, 4vw, 1.25rem);
+            color: var(--text-muted);
+            max-width: 42rem;
+            margin: 0 auto 2rem;
+            line-height: 1.6;
+            padding: 0 0.5rem;
+        }
+
+        .btn-group {
+            display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; width: 100%;
+        }
+
+        .btn-primary {
+            display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            background: white; color: #020617;
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            font-weight: 700;
+            transition: all 0.3s var(--ease-out-back);
+            white-space: nowrap;
+        }
+        @media (hover: hover) {
+            .btn-primary:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 0 40px rgba(255,255,255,0.3); }
+        }
+        .btn-primary:active { transform: scale(0.98); background: #e2e8f0; }
+
+        .btn-secondary {
+            display: flex; align-items: center; justify-content: center; gap: 0.75rem;
+            background: rgba(255,255,255,0.05); color: white;
+            border: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            border-radius: 1rem;
+            font-weight: 600;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s;
+            white-space: nowrap;
+        }
+        @media (hover: hover) {
+            .btn-secondary:hover { background: rgba(255,255,255,0.1); transform: translateY(-2px); }
+        }
+        .btn-secondary:active { background: rgba(255,255,255,0.15); transform: scale(0.98); }
+
+        /* 3D Browser Mockup */
+        .browser-mockup-wrapper {
+            margin-top: 3rem;
+            perspective: 1500px;
+            padding: 0; /* Remove padding to maximize width on mobile */
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+        .browser-mockup {
+            position: relative;
+            background: #0F1218;
+            border-radius: 0.75rem;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 30px 60px -10px rgba(0,0,0,0.6);
+            overflow: hidden;
+            transform-style: preserve-3d;
+            transform: rotateX(10deg);
+            transition: transform 0.1s linear;
+            max-width: 1100px;
+            width: 100%;
+        }
+        .browser-mockup::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.05) 50%, transparent 70%);
+            z-index: 30;
+            pointer-events: none;
+        }
+        
+        .browser-header {
+            height: 2.5rem; background: #1A1F2E;
+            border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; padding: 0 1rem; gap: 0.75rem;
+        }
+        .dots { display: flex; gap: 0.4rem; }
+        .dot { width: 0.6rem; height: 0.6rem; border-radius: 50%; }
+        .dot.red { background: #FF5F57; }
+        .dot.yellow { background: #FEBC2E; }
+        .dot.green { background: #28C840; }
+        
+        .address-bar {
+            flex: 1; margin: 0 1rem;
+            background: #0F1218; height: 1.5rem;
+            border-radius: 0.375rem; border: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: center;
+            font-family: monospace; font-size: 0.7rem; color: #64748B;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+
+        .browser-content {
+            aspect-ratio: 16/9;
+            background: #030712;
+            position: relative;
+            overflow: hidden;
+        }
+        .browser-content img {
+            width: 100%; height: 100%; object-fit: cover; object-position: top;
+            opacity: 0.9; transition: opacity 0.5s;
+        }
+        .browser-mockup:hover .browser-content img { opacity: 1; }
+        .browser-fade {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            height: 10rem;
+            background: linear-gradient(to top, #030712, transparent);
+        }
+
+        /* Features Section */
+        .features-section {
+            padding: 5rem 0; /* Adjusted */
+            position: relative;
+            z-index: 10;
+        }
+        
+        .grid-features {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+
+        .spotlight-card {
+            position: relative;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 1.25rem;
+            overflow: hidden;
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+        }
+        
+        @media (hover: hover) {
+            .spotlight-card:hover { transform: translateY(-5px); }
+            /* Spotlight Effect JS Target */
+            .spotlight-card::before {
+                content: '';
+                position: absolute;
+                top: 0; left: 0; right: 0; bottom: 0;
+                background: radial-gradient(800px circle at var(--mouse-x, 0) var(--mouse-y, 0), rgba(255,255,255,0.06), transparent 40%);
+                opacity: 0;
+                transition: opacity 0.3s;
+                pointer-events: none;
+                z-index: 1;
+            }
+            .spotlight-card:hover::before { opacity: 1; }
+        }
+
+        .card-content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; }
+        
+        .icon-box {
+            width: 3rem; height: 3rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 0.75rem;
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1rem;
+            color: #818CF8;
+            transition: all 0.3s;
+        }
+        @media (hover: hover) {
+            .spotlight-card:hover .icon-box { background: rgba(99, 102, 241, 0.2); transform: scale(1.1) rotate(3deg); }
+        }
+
+        .card-title { font-size: 1.25rem; font-weight: 700; color: white; margin-bottom: 0.5rem; }
+        .card-desc { color: var(--text-muted); line-height: 1.5; font-size: 0.95rem; }
+        
+        .feature-image-wrapper {
+            margin-top: 1.5rem;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            transform: translateY(0);
+            transition: transform 0.5s;
+        }
+        @media (hover: hover) {
+            .spotlight-card:hover .feature-image-wrapper { transform: translateY(-5px); }
+        }
+        .feature-image-wrapper img { width: 100%; display: block; }
+
+        /* Detail List */
+        .feature-list {
+            list-style: none; margin-top: 1rem; padding: 0;
+        }
+        .feature-list li {
+            display: flex; align-items: center; gap: 0.75rem; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;
+        }
+        .feature-list li svg { width: 1rem; height: 1rem; color: var(--primary); flex-shrink: 0; }
+
+        /* Slider Section */
+        .slider-section {
+            padding: 5rem 0;
+            background: #020617;
+            position: relative;
+            overflow: hidden;
+        }
+        .grid-bg {
+            position: absolute; inset: 0;
+            background-image: linear-gradient(to right, #80808012 1px, transparent 1px),
+                              linear-gradient(to bottom, #80808012 1px, transparent 1px);
+            background-size: 40px 40px;
+        }
+
+        .comparison-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            border-radius: 1rem;
+            overflow: hidden;
+            border: 1px solid #334155;
+            cursor: col-resize;
+            user-select: none;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            transition: transform 0.3s;
+        }
+        
+        .slider-image-back { width: 100%; height: 100%; object-fit: cover; }
+        .slider-image-front { 
+            position: absolute; top: 0; left: 0; height: 100%; width: 100%; object-fit: cover;
+            clip-path: inset(0 calc(100% - var(--slider-pos, 50%)) 0 0);
+        }
+        
+        .slider-handle {
+            position: absolute; top: 0; bottom: 0;
+            left: var(--slider-pos, 50%);
+            width: 2px; background: rgba(255,255,255,0.5);
+            pointer-events: none; z-index: 10;
+        }
+        .handle-circle {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 3.5rem; height: 3.5rem; /* Larger touch target for mobile */
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: white;
+            box-shadow: 0 0 15px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        .comparison-container:active .handle-circle { transform: translate(-50%, -50%) scale(0.9); background: rgba(255,255,255,0.2); }
+
+        .zexcel-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; margin-top: 2rem;
+        }
+        .zexcel-item {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); padding: 0.75rem; border-radius: 0.75rem;
+            text-align: center; font-size: 0.8rem; color: #cbd5e1;
+        }
+
+        /* Intelligence Section */
+        .intelligence-section { padding: 5rem 0; position: relative; }
+        .border-beam-container {
+            position: relative; padding: 1px; border-radius: 1rem; overflow: hidden;
+            background: #1e293b;
+            box-shadow: 0 20px 50px -10px rgba(0,0,0,0.5);
+            transition: transform 0.5s var(--ease-out-expo);
+        }
+        @media (hover: hover) {
+            .border-beam-container:hover { transform: scale(1.02); }
+        }
+
+        .border-beam-bg {
+            position: absolute; inset: 0; 
+            background: linear-gradient(90deg, transparent, #6366F1, transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s linear infinite;
+        }
+        .border-beam-inner {
+            position: relative; background: #0B0E14; border-radius: 1rem; padding: 0.5rem;
+        }
+
+        /* Footer */
+        .footer {
+            background: #020617;
+            border-top: 1px solid #1e293b;
+            padding: 4rem 0 2rem;
+        }
+
+        /* Mobile specific adjustments (Layout Improvements) */
+        @media (max-width: 767px) {
+            .navbar-wrapper { padding: 0 0.5rem; top: 0.5rem; }
+            .navbar { padding: 0.5rem 1rem; }
+            
+            /* Full width buttons on mobile */
+            .btn-group { flex-direction: column; width: 100%; gap: 0.75rem; }
+            .btn-primary, .btn-secondary { width: 100%; padding: 0.875rem; }
+            
+            /* Flatten tilt slightly on mobile for clarity */
+            .browser-mockup { transform: rotateX(2deg); }
+            
+            .grid-features { gap: 1rem; }
+            .spotlight-card { padding: 1.25rem; }
+            
+            /* Disable Parallax on mobile mostly */
+            .aurora-1, .aurora-2 { opacity: 0.15; }
+            
+            .slider-section, .intelligence-section, .features-section { padding: 4rem 0; }
+            
+            /* Stacked layout tweaks */
+            .hero-title { font-size: 3rem; }
+            .hero-desc { margin-bottom: 2rem; }
+        }
+
+        /* Desktop specific adjustments */
+        @media (min-width: 768px) {
+            .navbar { padding: 0.75rem 2rem; }
+            .mobile-menu-btn { display: none; }
+            .nav-links, .btn-download { display: flex; }
+            
+            .hero-title { font-size: 4.5rem; }
+            .hero-desc { font-size: 1.25rem; }
+            
+            .grid-features {
+                grid-template-columns: repeat(3, 1fr);
+                grid-template-rows: repeat(2, auto);
+                gap: 1.5rem;
+            }
+            .spotlight-card { padding: 2rem; }
+            .span-2 { grid-column: span 2; grid-row: span 2; }
+            
+            .comparison-grid {
+                display: grid; grid-template-columns: 1fr 1fr; gap: 4rem; align-items: center;
+            }
+            .flex-md-row { flex-direction: row; }
+            .text-md-left { text-align: left; }
+            .align-md-start { align-items: flex-start; }
+            .w-md-auto { width: auto; }
+            
+            .handle-circle { width: 2.5rem; height: 2.5rem; }
+
+            .zexcel-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        
+        /* Icons (SVG Helpers) */
+        svg { width: 100%; height: 100%; }
+        .icon-sm { width: 1.25rem; height: 1.25rem; }
+        .icon-md { width: 1.5rem; height: 1.5rem; }
+        .icon-lg { width: 2rem; height: 2rem; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "framer-motion": "https://esm.sh/framer-motion@^12.23.26",
+    "react/": "https://esm.sh/react@^19.2.3/"
+  }
+}
+</script>
+</head>
+<body>
+
+    <div class="bg-noise"></div>
+
+    <!-- NAVBAR -->
+    <div class="navbar-wrapper animate-reveal">
+        <nav class="navbar" id="navbar">
+            <div class="logo">
+                <div class="logo-icon">
+                    <div class="logo-glow"></div>
+                    <div class="logo-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm">
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                        </svg>
+                    </div>
+                </div>
+                <span>Ticket Manager</span>
+            </div>
+
+            <!-- Desktop Menu -->
+            <div class="nav-links">
+                <div class="nav-pill">
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#zexcel" class="nav-link">Zexcel</a>
+                    <a href="#intelligence" class="nav-link">Intelligence</a>
+                </div>
+                <button class="btn-download">
+                    Download
+                </button>
+            </div>
+
+            <!-- Mobile Toggle -->
+            <button class="mobile-menu-btn" id="mobileToggle" aria-label="Menu">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md">
+                    <line x1="4" y1="12" x2="20" y2="12"></line>
+                    <line x1="4" y1="6" x2="20" y2="6"></line>
+                    <line x1="4" y1="18" x2="20" y2="18"></line>
+                </svg>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div class="mobile-menu" id="mobileMenu">
+        <a href="#features" class="mobile-link">Features</a>
+        <a href="#zexcel" class="mobile-link">Zexcel</a>
+        <a href="#intelligence" class="mobile-link">Intelligence</a>
+        <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0.5rem 0;"></div>
+        <button class="btn-primary w-full justify-center" style="margin-top: 0.5rem;">Aggiungi a Chrome</button>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero container">
+        <div class="aurora-container" id="auroraContainer">
+            <div class="aurora-1"></div>
+            <div class="aurora-2"></div>
+        </div>
+        
+        <div class="flex flex-col items-center text-center">
+            <div class="animate-reveal delay-100 badge-new">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm" style="width: 1rem; height: 1rem;">
+                    <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path>
+                </svg>
+                <span>Versione 3.1</span>
+            </div>
+
+            <h1 class="hero-title animate-reveal delay-200">
+                Ticket <span class="text-gradient">Manager.</span>
+            </h1>
+
+            <p class="hero-desc animate-reveal delay-300">
+                L'estensione definitiva per <span style="color: #E2E8F0; font-weight: 600;">EasyVista</span>. 
+                Automazione, notepad contestuale e analytics in tempo reale.
+            </p>
+
+            <div class="btn-group animate-reveal delay-400">
+                <button class="btn-primary">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <circle cx="12" cy="12" r="4"></circle>
+                        <line x1="21.17" y1="8" x2="12" y2="8"></line>
+                        <line x1="3.95" y1="6.06" x2="8.54" y2="14"></line>
+                        <line x1="10.88" y1="21.94" x2="15.46" y2="14"></line>
+                    </svg>
+                    Aggiungi a Chrome
+                </button>
+                <button class="btn-secondary">
+                    Come funziona
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm" style="width: 1rem; height: 1rem;">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                        <polyline points="12 5 19 12 12 19"></polyline>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="browser-mockup-wrapper animate-reveal" style="transition-delay: 0.5s;">
+            <div class="browser-mockup" id="browserMockup">
+                <div class="browser-header">
+                    <div class="dots">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="address-bar">
+                        🔒 easyvista.com/tickets/INC-9921
+                    </div>
+                </div>
+                <div class="browser-content">
+                    <img src="https://placehold.co/1920x1080/0f172a/ffffff?text=Inserisci+Screenshot+Ticket+Qui" alt="Dashboard">
+                    <div class="browser-fade"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES GRID -->
+    <section id="features" class="features-section container">
+        <div class="text-center animate-reveal" style="margin-bottom: 3rem;">
+            <h2 class="hero-title" style="font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 1rem;">Strumenti Integrati.</h2>
+            <p class="hero-desc">Un ecosistema completo che vive dentro il tuo browser.</p>
+        </div>
+
+        <div class="grid-features">
+            <!-- Large Card -->
+            <div class="spotlight-card span-2 animate-reveal delay-100">
+                <div class="card-content">
+                    <div class="icon-box">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg">
+                            <path d="M15.5 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2V8.5L15.5 3Z"></path>
+                            <path d="M15 3v6h6"></path>
+                        </svg>
+                    </div>
+                    <h3 class="card-title">Notepad Contestuale</h3>
+                    <p class="card-desc" style="max-width: 30rem;">Note che si ricordano del ticket. Scrivi appunti formattati in markdown che si salvano automaticamente.</p>
+                    <ul class="feature-list">
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Salvataggio automatico locale
+                        </li>
+                        <li>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Supporto Markdown
+                        </li>
+                    </ul>
+                    <div class="feature-image-wrapper">
+                         <img src="https://placehold.co/800x400/1e1e2e/ffffff?text=Screenshot+Notepad" alt="Notepad UI">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Small Card 1 -->
+            <div class="spotlight-card animate-reveal delay-200">
+                <div class="card-content">
+                    <div class="icon-box" style="color: #60A5FA; background: rgba(96, 165, 250, 0.1); border-color: rgba(96, 165, 250, 0.2);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                    </div>
+                    <h3 class="card-title">Smart Timer</h3>
+                    <p class="card-desc">Tracking automatico del tempo speso su ogni ticket.</p>
+                </div>
+            </div>
+
+            <!-- Small Card 2 -->
+            <div class="spotlight-card animate-reveal delay-300">
+                <div class="card-content">
+                    <div class="icon-box" style="color: #34D399; background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.2);">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <path d="m9 12 2 2 4-4"></path>
+                        </svg>
+                    </div>
+                    <h3 class="card-title">Privacy First</h3>
+                    <p class="card-desc">Local-first architecture. I dati non lasciano mai il tuo PC.</p>
+                    <div class="flex gap-2" style="margin-top: 1.5rem;">
+                        <span style="font-size: 0.75rem; color: #34D399; background: rgba(52, 211, 153, 0.1); padding: 2px 6px; border-radius: 4px; font-family: monospace;">ENCRYPTED</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SLIDER SECTION -->
+    <section id="zexcel" class="slider-section">
+        <div class="grid-bg"></div>
+        <div class="container animate-reveal">
+            <div class="comparison-grid">
+                <div class="text-center text-md-left" style="margin-bottom: 2rem;">
+                    <div class="icon-box" style="color: #34D399; background: rgba(52, 211, 153, 0.1); border-color: rgba(52, 211, 153, 0.2); margin: 0 auto 1rem 0; display: inline-flex;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg">
+                            <path d="M12 3v18"></path>
+                            <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+                            <path d="M3 9h18"></path>
+                            <path d="M3 15h18"></path>
+                        </svg>
+                    </div>
+                    <h2 class="hero-title" style="font-size: clamp(2rem, 5vw, 3rem);">Zexcel Spreadsheet.</h2>
+                    <p class="hero-desc text-md-left" style="margin: 0;">
+                        Potenza di calcolo bruta. Ticket Manager include un editor di tabelle completo con formule e filtri.
+                        <br><br>
+                        <strong style="color: white;">Dual Mode:</strong> Trascina lo slider per vedere la differenza.
+                    </p>
+                    
+                    <div class="zexcel-grid">
+                        <div class="zexcel-item">Formule Excel</div>
+                        <div class="zexcel-item">Esportazione CSV</div>
+                        <div class="zexcel-item">Filtri Avanzati</div>
+                        <div class="zexcel-item">Grafici</div>
+                    </div>
+                </div>
+
+                <div class="comparison-container" id="sliderContainer">
+                    <!-- Background Image (Dark) -->
+                    <img src="https://placehold.co/800x600/0f172a/ffffff?text=Zexcel+DARK+Mode" class="slider-image-back" alt="Dark Mode">
+                    
+                    <!-- Foreground Image (Light) -->
+                    <img src="https://placehold.co/800x600/f8fafc/0f172a?text=Zexcel+LIGHT+Mode" class="slider-image-front" id="sliderFront" alt="Light Mode">
+
+                    <!-- Handle -->
+                    <div class="slider-handle" id="sliderHandle">
+                        <div class="handle-circle">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
+                                <circle cx="9" cy="12" r="1"></circle>
+                                <circle cx="9" cy="5" r="1"></circle>
+                                <circle cx="9" cy="19" r="1"></circle>
+                                <circle cx="15" cy="12" r="1"></circle>
+                                <circle cx="15" cy="5" r="1"></circle>
+                                <circle cx="15" cy="19" r="1"></circle>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- INTELLIGENCE SECTION -->
+    <section id="intelligence" class="intelligence-section container">
+        <div class="flex flex-col flex-md-row justify-between items-center" style="margin-bottom: 3rem;">
+            <div class="text-center text-md-left animate-reveal">
+                <div class="flex items-center justify-center align-md-start gap-2 mb-2" style="color: #818CF8;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
+                        <path d="M3 3v18h18"></path>
+                        <path d="M18 17V9"></path>
+                        <path d="M13 17V5"></path>
+                        <path d="M8 17v-3"></path>
+                    </svg>
+                    <span style="font-family: monospace; font-size: 0.875rem;">ANALYTICS 2.0</span>
+                </div>
+                <h2 class="hero-title" style="font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 0.5rem;">Workload Intelligence</h2>
+                <p class="hero-desc" style="margin-bottom: 0;">Insights in tempo reale sulla tua produttività.</p>
+            </div>
+            
+            <button class="btn-secondary animate-reveal delay-200" style="margin-top: 2rem;">
+                Esplora Demo
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
+                    <line x1="7" y1="17" x2="17" y2="7"></line>
+                    <polyline points="7 7 17 7 17 17"></polyline>
+                </svg>
+            </button>
+        </div>
+
+        <div class="border-beam-container animate-reveal delay-100">
+            <div class="border-beam-bg"></div>
+            <div class="border-beam-inner">
+                <img src="https://placehold.co/1200x675/0f172a/ffffff?text=Screenshot+Workload+Intelligence" style="width: 100%; border-radius: 0.5rem; display: block; opacity: 0.9;" alt="Intelligence UI">
+            </div>
+        </div>
+
+        <div class="grid-features" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); margin-top: 3rem;">
+            <div class="spotlight-card animate-reveal delay-200" style="padding: 1.5rem;">
+                <h4 style="font-weight: 700; color: white;">Live Sync</h4>
+                <p class="text-muted" style="font-size: 0.875rem;">Aggiornamento istantaneo.</p>
+            </div>
+            <div class="spotlight-card animate-reveal delay-300" style="padding: 1.5rem;">
+                <h4 style="font-weight: 700; color: white;">Predictive</h4>
+                <p class="text-muted" style="font-size: 0.875rem;">Stima fine giornata tramite AI.</p>
+            </div>
+            <div class="spotlight-card animate-reveal delay-400" style="padding: 1.5rem;">
+                <h4 style="font-weight: 700; color: white;">Local Storage</h4>
+                <p class="text-muted" style="font-size: 0.875rem;">100% Privacy.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="container text-center">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                 <svg viewBox="0 0 24 24" fill="none" stroke="#818CF8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+                <span style="font-weight: 700; font-size: 1.25rem; color: white;">Ticket Manager</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">&copy; 2025 Ticket Manager. Tutti i diritti riservati.</p>
+        </div>
+    </footer>
+
+    <script>
+        // --- VARIABLES ---
+        const navbar = document.getElementById('navbar');
+        const browserMockup = document.getElementById('browserMockup');
+        const auroraContainer = document.getElementById('auroraContainer');
+        const auroras = auroraContainer ? auroraContainer.children : [];
+        const mobileToggle = document.getElementById('mobileToggle');
+        const mobileMenu = document.getElementById('mobileMenu');
+        
+        // --- NAVBAR SCROLL EFFECT ---
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 20) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        // --- NAVIGATION LOGIC (Fix for "Buttons don't open anything") ---
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetId = this.getAttribute('href');
+                if (targetId === '#') return;
+                
+                const targetElement = document.querySelector(targetId);
+                if (targetElement) {
+                    // Close mobile menu if open
+                    mobileMenu.classList.remove('open');
+                    
+                    // Smooth scroll with offset for the fixed navbar
+                    const headerOffset = 80; // Adjusted for mobile height
+                    const elementPosition = targetElement.getBoundingClientRect().top;
+                    const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        
+                    window.scrollTo({
+                        top: offsetPosition,
+                        behavior: "smooth"
+                    });
+                }
+            });
+        });
+
+        // --- MOBILE MENU ---
+        mobileToggle.addEventListener('click', () => {
+            mobileMenu.classList.toggle('open');
+        });
+        
+        // --- SPOTLIGHT EFFECT ---
+        const cards = document.querySelectorAll('.spotlight-card');
+        
+        const updateSpotlight = (x, y, card) => {
+             const rect = card.getBoundingClientRect();
+             const localX = x - rect.left;
+             const localY = y - rect.top;
+             card.style.setProperty('--mouse-x', `${localX}px`);
+             card.style.setProperty('--mouse-y', `${localY}px`);
+        };
+
+        cards.forEach(card => {
+            // Mouse
+            card.addEventListener('mousemove', (e) => {
+                updateSpotlight(e.clientX, e.clientY, card);
+            });
+            // Touch
+            card.addEventListener('touchmove', (e) => {
+                 const touch = e.touches[0];
+                 updateSpotlight(touch.clientX, touch.clientY, card);
+            }, {passive: true});
+        });
+
+        // --- SLIDER LOGIC ---
+        const sliderContainer = document.getElementById('sliderContainer');
+        let isDragging = false;
+
+        function updateSlider(x) {
+            const rect = sliderContainer.getBoundingClientRect();
+            let pos = ((x - rect.left) / rect.width) * 100;
+            if (pos < 0) pos = 0;
+            if (pos > 100) pos = 100;
+            sliderContainer.style.setProperty('--slider-pos', `${pos}%`);
+        }
+
+        sliderContainer.addEventListener('mousedown', () => isDragging = true);
+        window.addEventListener('mouseup', () => isDragging = false);
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            updateSlider(e.clientX);
+        });
+
+        sliderContainer.addEventListener('touchstart', (e) => {
+            isDragging = true;
+        }, {passive: true});
+        
+        window.addEventListener('touchend', () => isDragging = false);
+        
+        window.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            updateSlider(e.touches[0].clientX);
+        }, {passive: true});
+
+        // --- HERO INTERACTION (3D TILT) ---
+        let lastFrameTime = 0;
+        
+        const handleTilt = (clientX, clientY) => {
+            const now = Date.now();
+            if (now - lastFrameTime < 16) return; // ~60fps cap
+            lastFrameTime = now;
+
+            const x = clientX / window.innerWidth;
+            const y = clientY / window.innerHeight;
+
+            if (browserMockup) {
+                const isMobile = window.innerWidth < 768;
+                // Much more subtle tilt on mobile to prevent distortion
+                const intensity = isMobile ? 3 : 10;
+                
+                const tiltX = (y - 0.5) * intensity;
+                const tiltY = (x - 0.5) * -intensity;
+                browserMockup.style.transform = `perspective(1500px) rotateX(${isMobile ? 2 : 10 + tiltX}deg) rotateY(${tiltY}deg)`;
+            }
+
+            if (auroras.length > 0) {
+                const moveX = (x - 0.5) * -30;
+                const moveY = (y - 0.5) * -30;
+                if(auroras[0]) auroras[0].style.transform = `translate(calc(-50% + ${moveX}px), ${moveY}px)`;
+                if(auroras[1]) auroras[1].style.transform = `translate(${moveX * 1.5}px, ${moveY * 1.5}px)`;
+            }
+        };
+
+        // Mouse Listener
+        document.addEventListener('mousemove', (e) => {
+            handleTilt(e.clientX, e.clientY);
+        });
+        
+        // Touch Listener for Tilt
+        document.addEventListener('touchmove', (e) => {
+            const touch = e.touches[0];
+            handleTilt(touch.clientX, touch.clientY);
+        }, {passive: true});
+
+        // --- SCROLL REVEAL ANIMATION (Intersection Observer) ---
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: "0px 0px -50px 0px"
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.animate-reveal').forEach(el => observer.observe(el));
+
+    </script>
+</body>
+</html>
