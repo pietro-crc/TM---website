@@ -45,7 +45,7 @@ const Hero: React.FC = () => {
               transition={{ delay: 0.4 }}
               className="text-base md:text-xl text-slate-400 mb-8 md:mb-10 max-w-2xl leading-relaxed px-4"
             >
-              L'estensione definitiva per <span className="text-slate-200 font-medium">EasyVista</span>. 
+              L'estensione definitiva per la gestione dei ticket. 
               Automazione, notepad contestuale e analytics in tempo reale.
             </motion.p>
 
@@ -90,7 +90,7 @@ const Hero: React.FC = () => {
                     </div>
                     <div className="flex-1 text-center mx-4 md:mx-10">
                         <div className="inline-flex items-center justify-center w-full max-w-md bg-[#0F1218] rounded-md md:rounded-lg h-6 md:h-8 text-[10px] md:text-xs text-slate-500 border border-white/5 font-mono shadow-inner overflow-hidden whitespace-nowrap px-2">
-                            <span className="text-indigo-400 mr-2 hidden xs:inline">🔒</span> easyvista.com/tickets/INC-9921
+                            <span className="text-indigo-400 mr-2 hidden xs:inline">🔒</span> sistema.com/tickets/TICK-123
                         </div>
                     </div>
                 </div>
